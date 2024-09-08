@@ -16,7 +16,7 @@ try:
 
 	while datetime.datetime.now() < read_until:
 		msg, _ = sock.recvfrom(1024)
-		print(msg)
 		wav.writeframes(msg)
+		print("writing data")
 finally:
 	wav.close()
