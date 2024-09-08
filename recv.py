@@ -7,7 +7,7 @@ read_until = datetime.datetime.now() + datetime.timedelta(seconds = 30)
 
 wav = wave.open('sound.wav', 'wb')
 wav.setnchannels(1)
-wav.setframerate(16000)
+wav.setframerate(8000)
 wav.setsampwidth(3)
 
 n = 0
