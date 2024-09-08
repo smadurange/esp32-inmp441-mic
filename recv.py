@@ -12,7 +12,7 @@ wav.setsampwidth(4)
 
 try:
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	sock.bind(('', 12000))
+	sock.bind(('', 3333))
 
 	while datetime.datetime.now() < read_until:
     	msg, _ = sock.recvfrom(1024)
