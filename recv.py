@@ -8,8 +8,9 @@ read_until = datetime.datetime.now() + datetime.timedelta(seconds = 30)
 wav = wave.open('sound.wav', 'wb')
 wav.setnchannels(1)
 wav.setframerate(8000)
-wav.setsampwidth(4)
+wav.setsampwidth(3)
 
+n = 0
 is_first = True
 
 try:
@@ -22,8 +23,10 @@ try:
 				+ datetime.timedelta(seconds = 30)
 			is_first = False
 
-		msg, _ = sock.recvfrom(1024)
+		msg, _ = sock.recvfrom(2100)
 		wav.writeframes(msg)
-		print("writing data")
+
+		n += 1
+		print(f"writing data: {n}")
 finally:
 	wav.close()
