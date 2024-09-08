@@ -18,8 +18,8 @@
 
 #include "wifi.h"
 
-#define BUFLEN	      2100
-#define SAMPLE_RATE   8000
+#define BUFLEN	       2100
+#define SAMPLE_RATE    8000
 
 #define I2S_WS  GPIO_NUM_4
 #define I2S_SD  GPIO_NUM_1
