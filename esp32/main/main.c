@@ -1,4 +1,4 @@
-#include <string.h>
+#include <errno.h>
 #include <sys/param.h>
 
 #include <freertos/FreeRTOS.h>
@@ -29,27 +29,49 @@
 
 const char *TAG = "mimir";
 
-static int sock;
-static size_t sock_addr_len;
-static struct sockaddr *sock_addr;
-
 static i2s_chan_handle_t chan;
 
 static void i2s_read_task(void *args)
 {
 	int rc;
 	size_t n;
-	char *buf = calloc(1, BUFLEN + 1);
+	char *buf = calloc(1, BUFLEN);
+
+	char *ip_addr;
+	int family, port;
+	struct timeval timeout;
+	struct sockaddr_in dest_addr;
+
+	family = AF_INET;
+	port = CONFIG_UDP_PORT;
+	ip_addr = CONFIG_UDP_ADDR;
+
+	dest_addr.sin_addr.s_addr = inet_addr(ip_addr);
+	dest_addr.sin_family = family;
+	dest_addr.sin_port = htons(port);
+
+	int sock = socket(family, SOCK_DGRAM, IPPROTO_IP);	
+
+	if (sock < 0) {
+		ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
+		return;
+	}
+
+	timeout.tv_sec = 10;
+	timeout.tv_usec = 0;
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
+
+	ESP_LOGI(TAG, "Socket created, sending to %s:%d", ip_addr, port);
 
 	ESP_ERROR_CHECK(i2s_channel_enable(chan));
 
 	for (;;) {
 		if (i2s_channel_read(chan, buf, BUFLEN, &n, 1000) == ESP_OK) {
 			if (n > 0) {
-				buf[n] = '\0';
-				rc = sendto(sock, buf, strlen(buf), 0, sock_addr, sock_addr_len);
+				rc = sendto(sock, buf, n, 0, (struct sockaddr *)&dest_addr,
+						sizeof(dest_addr));
 				if (rc < 0)
-					ESP_LOGE(TAG, "sendto() failed: errno %d", errno);
+					ESP_LOGE(TAG, "sendto() failed: %s", strerror(errno));
 			}
 		} else
 			printf("Read Task: i2s read failed\n");
@@ -91,39 +113,6 @@ static inline void i2s_init(void)
 
 static void udp_client_init(void)
 {
-	char *ip_addr;
-	int family, port;
-	struct timeval timeout;
-	struct sockaddr_in *dest_addr;
-
-	family = AF_INET;
-	port = CONFIG_UDP_PORT;
-	ip_addr = CONFIG_UDP_ADDR;
-
-	sock = socket(family, SOCK_DGRAM, IPPROTO_IP);	
-
-	if (sock < 0) {
-		ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
-		return;
-	}
-
-	timeout.tv_sec = 10;
-	timeout.tv_usec = 0;
-	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
-
-	if (!(dest_addr = malloc(sizeof(dest_addr)))) {
-		ESP_LOGE(TAG, "malloc() failed for destination address");
-		return;
-	}
-
-	dest_addr->sin_addr.s_addr = inet_addr(ip_addr);
-	dest_addr->sin_family = family;
-	dest_addr->sin_port = htons(port);	
-
-	sock_addr = (struct sockaddr *) dest_addr;
-	sock_addr_len = sizeof dest_addr;
-
-	ESP_LOGI(TAG, "Socket created, sending to %s:%d", ip_addr, port);
 }
 
 void app_main(void)

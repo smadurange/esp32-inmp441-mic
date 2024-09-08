@@ -1,7 +1,9 @@
+# Test artifacts
+**/*.wav
+
 # Config
 **/tickers.txt
 **/Kconfig.projbuild
-
 **/sdkconfig*
 
 # Vim
