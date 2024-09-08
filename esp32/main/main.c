@@ -18,7 +18,7 @@
 
 #include "wifi.h"
 
-#define BUFLEN	      1024
+#define BUFLEN	      2048
 #define SAMPLE_RATE   8000
 
 #define I2S_WS  GPIO_NUM_4
@@ -71,7 +71,7 @@ static void i2s_read_task(void *args)
 				if (rc < 0)
 					ESP_LOGE(TAG, "sendto() failed: %s", strerror(errno));
 
-				vTaskDelay(1 / portTICK_PERIOD_MS);
+				// vTaskDelay(1 / portTICK_PERIOD_MS);
 			}
 		} else
 			printf("Read Task: i2s read failed\n");
