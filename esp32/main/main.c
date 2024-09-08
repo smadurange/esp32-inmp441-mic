@@ -27,6 +27,8 @@
 #define I2S_SD  GPIO_NUM_1
 #define I2S_SCK GPIO_NUM_5
 
+const char *TAG = "mimir";
+
 static int sock;
 static size_t sock_addr_len;
 static struct sockaddr *sock_addr;
@@ -45,9 +47,9 @@ static void i2s_read_task(void *args)
 		if (i2s_channel_read(chan, buf, BUFLEN, &n, 1000) == ESP_OK) {
 			if (n > 0) {
 				buf[n] = '\0';
-				rc = sendto(sock, s, strlen(s), 0, sock_addr, sock_addr_len);
+				rc = sendto(sock, buf, strlen(buf), 0, sock_addr, sock_addr_len);
 				if (rc < 0)
-					ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+					ESP_LOGE(TAG, "sendto() failed: errno %d", errno);
 			}
 		} else
 			printf("Read Task: i2s read failed\n");
@@ -65,7 +67,7 @@ static inline void i2s_init(void)
 	ESP_ERROR_CHECK(i2s_new_channel(&chan_cfg, NULL, &chan));
 
 	i2s_std_config_t std_cfg = {
-		.clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(SAMP_RATE),
+		.clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
 		.slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(
 			I2S_DATA_BIT_WIDTH_24BIT, I2S_SLOT_MODE_MONO),
 		.gpio_cfg = {
@@ -89,20 +91,20 @@ static inline void i2s_init(void)
 
 static void udp_client_init(void)
 {
-	const int family = AF_INET;
-	const int port = CONFIG_UDP_PORT;
-	const char[] ip_addr = CONFIG_UDP_ADDR;
-	
+	char *ip_addr;
+	int family, port;
 	struct timeval timeout;
 	struct sockaddr_in *dest_addr;
 
-	addr_family = AF_INET;
+	family = AF_INET;
+	port = CONFIG_UDP_PORT;
+	ip_addr = CONFIG_UDP_ADDR;
 
 	sock = socket(family, SOCK_DGRAM, IPPROTO_IP);	
 
 	if (sock < 0) {
 		ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
-		break;
+		return;
 	}
 
 	timeout.tv_sec = 10;
@@ -118,7 +120,7 @@ static void udp_client_init(void)
 	dest_addr->sin_family = family;
 	dest_addr->sin_port = htons(port);	
 
-	sock_addr = (struct sock_addr *) dest_addr;
+	sock_addr = (struct sockaddr *) dest_addr;
 	sock_addr_len = sizeof dest_addr;
 
 	ESP_LOGI(TAG, "Socket created, sending to %s:%d", ip_addr, port);
@@ -132,9 +134,12 @@ void app_main(void)
 	wifi_connect();
 
 	i2s_init();
+	udp_client_init();
+
 	xTaskCreate(i2s_read_task, "i2s_read_task", 4096, NULL, 5, NULL);
 
 	for (;;)
 		vTaskDelay(500 / portTICK_PERIOD_MS);
 }
+
 
